@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>AIEN 영상 보기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<style>
+/* 로컬 플레이어(player\index.html)·도구와 같은 글꼴·색·버튼. 이 PC에 에이투지체·을유1945가 없으면 Pretendard·Noto Serif KR */
+@font-face { font-family: "A2Z"; font-weight: 400; src: local("에이투지체 4 Regular"), local("A2Z 4 Regular"); }
+@font-face { font-family: "A2Z"; font-weight: 500; src: local("에이투지체 5 Medium"), local("A2Z 5 Medium"); }
+@font-face { font-family: "A2Z"; font-weight: 600; src: local("에이투지체 6 SemiBold"), local("A2Z 6 SemiBold"); }
+@font-face { font-family: "A2Z"; font-weight: 700; src: local("에이투지체 7 Bold"), local("A2Z 7 Bold"); }
+@font-face { font-family: "Eulyoo"; font-weight: 400; src: local("을유1945"), local("Eulyoo1945"), local("Eulyoo1945-Regular"); }
+:root {
+  --ink: #0E1116; --paper: #FFFFFF; --mute: #6B7280; --faint: #C9CDD3; --line: #E4E6EA; --soft: #F4F5F7;
+  --blue: #0E4A84; --blue-2: #19558F; --blue-ink: #0A3C6D; --blue-soft: #E8F0F8; --fail: #B3261E;
+  --sans: "A2Z", "에이투지체", "Pretendard Variable", "Pretendard", "Malgun Gothic", sans-serif;
+  --serif: "Eulyoo", "을유1945", "Noto Serif KR", "Batang", serif;
+  --btn-face: linear-gradient(180deg, #FFFFFF 0%, #F3F4F6 100%); --btn-edge: #E1E4E8;
+  --btn-shadow: inset 0 1px 0 #FFFFFF, 0 2px 4px rgba(14,17,22,.07), 0 5px 10px -7px rgba(14,17,22,.12);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font: 15px/1.55 var(--sans); color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased; }
+button, input { font-family: var(--sans); }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+.caps { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 22px; border-radius: 999px;
+       border: 1px solid var(--btn-edge); color: var(--ink); background: var(--btn-face); box-shadow: var(--btn-shadow);
+       font: 600 14px/1.4 var(--sans); transition: background .15s, box-shadow .15s, transform .1s; }
+.btn:hover { background: linear-gradient(180deg, #FFFFFF, #ECEEF1); box-shadow: inset 0 1px 0 #FFFFFF, 0 3px 7px rgba(14,17,22,.10); }
+.btn:active { transform: translateY(1px); background: #EEF0F3; box-shadow: inset 0 2px 3px rgba(14,17,22,.10), 0 1px 0 #FFFFFF; }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn:focus-visible, .part:focus-visible, .dstep:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.btn.primary { color: #fff; border-color: var(--blue); background: linear-gradient(180deg, var(--blue-2), var(--blue)); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 5px rgba(14,74,132,.16); }
+.btn.primary:hover { background: linear-gradient(180deg, #154D83, var(--blue-ink)); }
+.btn.sm { min-height: 34px; padding: 6px 14px; font-size: 13px; }
+.btn .n { font-weight: 700; opacity: .7; }
+
+/* 접속 코드 */
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.gate form { width: min(420px, 100%); border: 1px solid var(--line); border-radius: 18px; padding: 36px 32px; box-shadow: 0 18px 50px rgba(14,17,22,.08); }
+.gate h1 { margin: 6px 0 26px; font: 400 30px/1.3 var(--serif); }
+.gate label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.gate input { width: 100%; font-size: 17px; padding: 12px 16px; border: 1px solid var(--faint); border-radius: 999px; letter-spacing: .06em; }
+.gate input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.gate .btn { width: 100%; margin-top: 14px; }
+#msg { min-height: 22px; margin: 12px 0 0; font-size: 14px; color: var(--mute); }
+#msg.err { color: var(--fail); }
+
+/* 위 띠 */
+.top { display: flex; align-items: center; gap: 24px; padding: 20px 48px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand { flex: 1; min-width: 260px; }
+.brand h1 { margin: 2px 0 0; font: 400 30px/1.2 var(--serif); }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+
+main { padding: 22px 48px 40px; }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+.head h2 { margin: 4px 0 0; font: 400 34px/1.2 var(--serif); }
+.head .en { color: var(--mute); font-size: 15px; margin-top: 2px; }
+.vers { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 9; }
+.stage video { width: 100%; height: 100%; display: block; background: #000; }
+.cap { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); max-width: 86%; text-align: center; pointer-events: none;
+       font: 600 clamp(13px, 1.9vw, 24px)/1.4 var(--sans); color: #fff; white-space: pre-line; background: rgba(0,0,0,.62); padding: 4px 14px; border-radius: 4px; }
+.cap:empty { display: none; }
+.wait { position: absolute; inset: 0; display: grid; place-items: center; color: #C9CDD3; font-size: 15px; pointer-events: none; }
+.note { min-height: 22px; margin: 10px 2px 0; font-size: 13px; color: var(--mute); }
+.ctrl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.ctrl .sep { width: 1px; height: 24px; background: var(--line); margin: 0 6px; }
+.speed { display: inline-flex; border: 1px solid var(--btn-edge); border-radius: 999px; overflow: hidden; box-shadow: var(--btn-shadow); }
+.speed button { border: 0; background: var(--btn-face); padding: 7px 12px; font: 600 13px var(--sans); color: var(--ink); border-left: 1px solid var(--line); }
+.speed button:first-child { border-left: 0; }
+.speed button.on { background: var(--ink); color: #fff; }
+
+.aside h3 { margin: 0 0 10px; font: 700 13px var(--sans); color: var(--mute); letter-spacing: .08em; }
+.part { width: 100%; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; text-align: left;
+        border: 0; border-top: 1px solid var(--line); background: none; padding: 12px 4px; color: var(--ink); font: 500 15px var(--sans); }
+.part:last-of-type { border-bottom: 1px solid var(--line); }
+.part .c { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--faint); display: grid; place-items: center; font: 700 13px/1 var(--sans); color: var(--mute); }
+.part .t { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.part:hover:not(:disabled) { background: var(--soft); }
+.part.on .c { background: var(--blue); border-color: var(--blue); color: #fff; }
+.part.on { font-weight: 700; }
+.part:disabled { color: var(--faint); cursor: default; }
+.part .tag { display: block; font-size: 11px; color: var(--mute); font-weight: 400; }
+.legend { margin-top: 14px; font-size: 12px; color: var(--mute); line-height: 1.7; }
+
+/* 도구 사용 예시 */
+.demo-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.dgrid { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; align-items: start; }
+.dlist { max-height: calc(100vh - 230px); overflow: auto; padding-right: 6px; }
+.dgroup { margin: 14px 0 4px; font: 700 12px var(--sans); color: var(--mute); letter-spacing: .08em; }
+.dgroup:first-child { margin-top: 0; }
+.dstep { width: 100%; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; text-align: left; border: 0; background: none;
+         padding: 8px 6px; border-radius: 8px; color: var(--ink); font: 500 13.5px/1.45 var(--sans); }
+.dstep .c { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--faint); display: grid; place-items: center; font: 700 11px/1 var(--sans); color: var(--mute); }
+.dstep:hover { background: var(--soft); }
+.dstep.on { background: var(--blue-soft); font-weight: 700; }
+.dstep.on .c { background: var(--blue); border-color: var(--blue); color: #fff; }
+.shot { width: min(100%, calc((100vh - 280px) * 1.6)); min-width: min(100%, 560px); position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 16 / 10; background: var(--soft); }
+.shot img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.cursor { position: absolute; width: 0; height: 0; transition: left .7s cubic-bezier(.4,0,.2,1), top .7s cubic-bezier(.4,0,.2,1); pointer-events: none; }
+.cursor svg { position: absolute; left: -3px; top: -2px; width: 26px; height: 26px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.cursor .ring { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--blue); opacity: 0; }
+.cursor.click .ring { animation: ping .8s ease-out .65s 1; }
+@keyframes ping { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.4); } }
+.dcap { margin: 14px 2px 0; font-size: 17px; font-weight: 600; min-height: 50px; }
+.dcap small { display: block; font-size: 12px; color: var(--mute); font-weight: 500; margin-bottom: 2px; }
+
+@media (max-width: 1000px) {
+  .top, main { padding-left: 16px; padding-right: 16px; }
+  .grid, .dgrid { grid-template-columns: 1fr; }
+  .dlist { max-height: 260px; }
+}
+@media (prefers-reduced-motion: reduce) { .cursor { transition: none; } .cursor.click .ring { animation: none; } }
+</style>
+</head>
+<body>
+<div class="gate" id="gate-wrap">
+  <form id="gate" autocomplete="off">
+    <div class="caps">2026 AI 혁신 과제 · 내부 검토용</div>
+    <h1>강의 현지화 도구<br>영상 보기</h1>
+    <label for="code">접속 코드</label>
+    <input id="code" type="password" required autofocus>
+    <button class="btn primary" id="go" type="submit">열기</button>
+    <p id="msg" role="status"></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="brand">
+      <div class="caps" id="course-en"></div>
+      <h1 id="course-ko"></h1>
+    </div>
+    <nav class="tabs">
+      <button class="btn primary" id="tab-video">영상 보기</button>
+      <button class="btn" id="tab-demo">도구 사용 예시</button>
+    </nav>
+  </header>
+
+  <main id="view-video">
+    <div class="head">
+      <div>
+        <div class="caps" id="lesson-cap"></div>
+        <h2 id="lesson-title"></h2>
+        <div class="en" id="lesson-en"></div>
+      </div>
+      <div class="vers" id="vers"></div>
+    </div>
+    <div class="grid">
+      <section>
+        <div class="stage">
+          <video id="vid" controls playsinline preload="metadata"></video>
+          <div class="cap" id="cap"></div>
+          <div class="wait" id="wait" hidden>영상을 불러오는 중…</div>
+        </div>
+        <div class="note" id="note"></div>
+        <div class="ctrl">
+          <button class="btn sm" id="prev">← 이전</button>
+          <button class="btn sm" id="next">다음 →</button>
+          <span class="sep"></span>
+          <span class="speed" id="speed"></span>
+          <span class="sep"></span>
+          <button class="btn sm" id="subs">자막 켜기</button>
+        </div>
+      </section>
+      <aside class="aside">
+        <h3>재생목록</h3>
+        <div id="parts"></div>
+        <div class="legend" id="legend"></div>
+      </aside>
+    </div>
+  </main>
+
+  <main id="view-demo" hidden>
+    <div class="head">
+      <div>
+        <div class="caps">지금 도구 화면 · 1주차 1차시 실제 작업 기준</div>
+        <h2 id="demo-title">도구 사용 예시</h2>
+        <div class="en" id="demo-sub"></div>
+      </div>
+      <div class="demo-tabs" id="demo-tabs"></div>
+    </div>
+    <div class="dgrid">
+      <div class="dlist" id="dlist"></div>
+      <section>
+        <div class="shot"><img id="dimg" alt=""><div class="cursor" id="cursor"><span class="ring"></span>
+          <svg viewBox="0 0 24 24"><path d="M4 2l15 9-6.5 1.5L16 20l-3 1.4-3.4-7.4L4 18z" fill="#fff" stroke="#0E1116" stroke-width="1.6" stroke-linejoin="round"/></svg></div></div>
+        <div class="dcap" id="dcap"></div>
+        <div class="ctrl">
+          <button class="btn sm" id="dprev">← 이전 화면</button>
+          <button class="btn sm" id="dnext">다음 화면 →</button>
+          <span class="sep"></span>
+          <button class="btn sm" id="dplay">▶ 자동으로 넘기기</button>
+          <span class="muted" id="dpos" style="font-size:13px;color:var(--mute)"></span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const SALT = Uint8Array.from(atob("Ja27AbC/cFZ+2EhgFnSNRg=="), c => c.charCodeAt(0));
+const ITER = 600000;
+const $ = id => document.getElementById(id);
+let KEY = null, D = null;
+
+async function keyFor(code) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt: SALT, iterations: ITER, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+}
+async function open1(name) {
+  const r = await fetch("files/" + name);
+  if (!r.ok) throw new Error("fetch " + name);
+  const buf = new Uint8Array(await r.arrayBuffer());
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.slice(0, 12) }, KEY, buf.slice(12));
+}
+async function unlock(code) {
+  KEY = await keyFor(code);
+  try { D = JSON.parse(new TextDecoder().decode(await open1("data.bin"))); }
+  catch (e) { if (e.name === "OperationError") return false; throw e; }
+  try { sessionStorage.setItem("aien-lp-code", code); } catch (e) {}
+  $("gate-wrap").hidden = true; $("app").hidden = false;
+  start();
+  return true;
+}
+async function run(code, quiet) {
+  $("go").disabled = true; $("msg").className = ""; $("msg").textContent = "확인 중…";
+  try {
+    if (await unlock(code)) return;
+    $("msg").className = "err"; $("msg").textContent = quiet ? "" : "접속 코드가 맞지 않습니다.";
+  } catch (e) { $("msg").className = "err"; $("msg").textContent = "자료를 불러오지 못했습니다. 새로고침해 주세요."; }
+  $("go").disabled = false; $("code").select();
+}
+$("gate").addEventListener("submit", e => { e.preventDefault(); run($("code").value.trim(), false); });
+let saved = null;
+try { saved = sessionStorage.getItem("aien-lp-code"); } catch (e) {}
+if (saved) run(saved, true);
+
+function load(k, d) { try { const v = localStorage.getItem("aienLP." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+function keep(k, v) { try { localStorage.setItem("aienLP." + k, JSON.stringify(v)); } catch (e) {} }
+function mmss(s) { if (!s && s !== 0) return ""; s = Math.round(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+/* ================= 영상 보기 ================= */
+const SYNC = ["ko", "en", "lip", "p2"];   // 길이가 같은 편집본 — 판을 바꿔도 보던 시점에서 이어짐 (HeyGen 조각은 처음부터)
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const NOTE = {
+  ko: "업체가 만든 한국어 최종 영상입니다.",
+  en: "1안 도구로 만든 영문 최종 영상 — 교수님 영상 그대로, 영어 음성·자막·화면 글자.",
+  lip: "1안 도구 6그룹(sync.so)으로 교수님 입모양을 영어 음성에 맞춘 판입니다. 입모양은 교수님이 나오는 핵심 강의·사례 연결에만.",
+  p2: "2안 도구로 만든 교안 영상 — 아바타 자리는 아직 실루엣입니다.",
+  hg: "2안 아바타를 HeyGen으로 만들어 본 조각입니다. 지금 있는 조각만, 장면(시간) 순서대로.",
+};
+const vid = $("vid");
+let hls = null, ver = load("ver", "en"), partIdx = 0, subsOn = load("subs", false), speed = load("speed", 1), cur = null;
+
+const listFor = k => k === "hg" ? D.heygen : D.parts;
+function pick(part, k) {
+  if (part.v[k]) return { k, f: part.v[k] };
+  if (k === "lip" && part.v.en) return { k: "en", f: part.v.en, fallback: true };
+  return null;
+}
+function keyUrl(k) {
+  const bytes = new Uint8Array(D.keys[k].match(/../g).map(h => parseInt(h, 16)));
+  return URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+}
+const KEYURL = {};
+function m3u8Url(f, k) {
+  const base = new URL(`../${f.repo}/${f.dir}/`, location.href).href;
+  const keyRepo = f.repo.replace("lecture-player-", "");
+  KEYURL[keyRepo] = KEYURL[keyRepo] || keyUrl(keyRepo);
+  const text = f.m3u8.replace('URI="KEY"', `URI="${KEYURL[keyRepo]}"`).replace(/^(s\d+\.ts)$/gm, base + "$1");
+  return URL.createObjectURL(new Blob([text], { type: "application/vnd.apple.mpegurl" }));
+}
+
+function start() {
+  $("course-en").textContent = D.course_en;
+  $("course-ko").textContent = D.course_ko + " · 영상 보기";
+  $("lesson-cap").textContent = D.course_ko;
+  $("lesson-title").textContent = D.lesson;
+  $("lesson-en").textContent = D.lesson_en;
+  if (!D.versions.some(v => v.key === ver)) ver = "en";
+  drawVers(); drawCtrl();
+  playPart(Math.min(load("part." + ver, 0), listFor(ver).length - 1), 0, false);
+  $("tab-video").onclick = () => tab("video");
+  $("tab-demo").onclick = () => tab("demo");
+}
+function tab(t) {
+  $("view-video").hidden = t !== "video"; $("view-demo").hidden = t !== "demo";
+  $("tab-video").className = "btn" + (t === "video" ? " primary" : "");
+  $("tab-demo").className = "btn" + (t === "demo" ? " primary" : "");
+  if (t === "demo") { vid.pause(); demoStart(); } else demoStop();
+}
+function drawVers() {
+  $("vers").innerHTML = "";
+  D.versions.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.className = "btn" + (v.key === ver ? " primary" : "");
+    b.innerHTML = `<span class="n">${i + 1}</span> ${v.name}`;
+    b.onclick = () => switchVer(v.key);
+    $("vers").appendChild(b);
+  });
+}
+function drawParts() {
+  $("parts").innerHTML = "";
+  listFor(ver).forEach((p, i) => {
+    const got = pick(p, ver);
+    const b = document.createElement("button");
+    b.className = "part" + (i === partIdx ? " on" : "");
+    b.disabled = !got;
+    const tag = p.tag || (!got ? "이 판에는 없음" : got.fallback ? "입모양 대상 아님 · 번역본" : "");
+    b.innerHTML = `<span class="c">${i + 1}</span><span>${p.name}${tag ? `<span class="tag">${tag}</span>` : ""}</span><span class="t">${got ? mmss(got.f.sec) : ""}</span>`;
+    b.onclick = () => playPart(i, 0, true);
+    $("parts").appendChild(b);
+  });
+  $("legend").textContent = ver === "hg" ? "조각 아래 시각 = 2안 영상에서 그 장면이 나오는 자리" : "한 파트가 끝나면 다음 파트로 이어집니다.";
+}
+function drawCtrl() {
+  $("speed").innerHTML = "";
+  for (const s of SPEEDS) {
+    const b = document.createElement("button");
+    b.textContent = s + "x"; b.className = s === speed ? "on" : "";
+    b.onclick = () => { speed = s; keep("speed", s); vid.playbackRate = s; drawCtrl(); };
+    $("speed").appendChild(b);
+  }
+  $("subs").textContent = subsOn ? "자막 끄기" : "자막 켜기";
+  $("subs").className = "btn sm" + (subsOn ? " primary" : "");
+  $("prev").disabled = nextAvail(-1) < 0;
+  $("next").disabled = nextAvail(1) < 0;
+}
+function nextAvail(dir) {
+  const list = listFor(ver);
+  for (let i = partIdx + dir; i >= 0 && i < list.length; i += dir) if (pick(list[i], ver)) return i;
+  return -1;
+}
+function playPart(i, t, autoplay) {
+  partIdx = Math.max(0, i);
+  const part = listFor(ver)[partIdx];
+  cur = part ? pick(part, ver) : null;
+  $("cap").textContent = "";
+  if (hls) { hls.destroy(); hls = null; }
+  vid.removeAttribute("src");
+  if (cur) {
+    $("wait").hidden = false;
+    const src = m3u8Url(cur.f);
+    const ready = () => {
+      $("wait").hidden = true;
+      vid.playbackRate = speed;
+      if (t) vid.currentTime = Math.min(t, Math.max(0, (vid.duration || cur.f.sec) - 0.5));
+      if (autoplay) vid.play().catch(() => {});
+    };
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({ startPosition: t || -1 });
+      hls.loadSource(src); hls.attachMedia(vid);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { $("wait").hidden = true; vid.playbackRate = speed; if (autoplay) vid.play().catch(() => {}); });
+      hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) { $("wait").hidden = false; $("wait").textContent = "영상을 불러오지 못했어요. 새로고침해 주세요."; } });
+    } else { vid.src = src; vid.addEventListener("loadedmetadata", ready, { once: true }); }
+  }
+  $("note").textContent = cur && cur.fallback ? "이 파트는 교수님이 화면에 나오지 않아 입모양을 맞추지 않았어요 — 1안 번역본을 재생합니다." : NOTE[ver] || "";
+  keep("part." + ver, partIdx);
+  drawParts(); drawCtrl();
+}
+function switchVer(k) {
+  if (k === ver) return;
+  const t = SYNC.includes(k) && SYNC.includes(ver) ? vid.currentTime : 0;
+  const playing = !vid.paused;
+  const sameList = (k === "hg") === (ver === "hg");
+  ver = k; keep("ver", k);
+  drawVers();
+  playPart(sameList ? partIdx : load("part." + k, 0), t, playing);
+}
+vid.addEventListener("timeupdate", () => {
+  if (!subsOn || !cur) { $("cap").textContent = ""; return; }
+  const t = vid.currentTime, c = cur.f.sub.find(c => t >= c[0] && t < c[1]), s = c ? c[2] : "";
+  if ($("cap").textContent !== s) $("cap").textContent = s;
+});
+vid.addEventListener("ended", () => { const j = nextAvail(1); if (j >= 0) playPart(j, 0, true); });
+$("prev").onclick = () => { const j = nextAvail(-1); if (j >= 0) playPart(j, 0, true); };
+$("next").onclick = () => { const j = nextAvail(1); if (j >= 0) playPart(j, 0, true); };
+$("subs").onclick = () => { subsOn = !subsOn; keep("subs", subsOn); drawCtrl(); vid.dispatchEvent(new Event("timeupdate")); };
+
+/* ================= 도구 사용 예시 ================= */
+const TOOLS = [
+  { key: "p1", name: "1안 · 교수님 영상 영문화", sub: "자막 → 화면 그래픽 → 인트로 → 음성 → 영상 → 입모양 → 검사 → 확인 → 홍보" },
+  { key: "p2", name: "2안 · 교안 + 아바타", sub: "시작 점검 → 대본 → 교안 ①~④ → 아바타 → 영상 → 검사 → 확인 · 1안 대본·음성을 그대로 씀" },
+];
+let tool = "p1", di = 0, dtimer = null;
+const IMG = {};
+async function imgUrl(name) {
+  if (!IMG[name]) IMG[name] = open1(name).then(b => URL.createObjectURL(new Blob([b], { type: "image/jpeg" })));
+  return IMG[name];
+}
+function demoStart() { drawDemoTabs(); drawDemo(); }
+function demoStop() { clearInterval(dtimer); dtimer = null; $("dplay").textContent = "▶ 자동으로 넘기기"; }
+function drawDemoTabs() {
+  const T = TOOLS.find(t => t.key === tool);
+  $("demo-title").textContent = T.name;
+  $("demo-sub").textContent = T.sub;
+  $("demo-tabs").innerHTML = "";
+  for (const t of TOOLS) {
+    const b = document.createElement("button");
+    b.className = "btn" + (t.key === tool ? " primary" : "");
+    b.textContent = t.name;
+    b.onclick = () => { tool = t.key; di = 0; demoStop(); demoStart(); };
+    $("demo-tabs").appendChild(b);
+  }
+  const F = D.demo[tool];
+  $("dlist").innerHTML = "";
+  let g = null;
+  F.forEach((f, i) => {
+    if (f.group !== g) { g = f.group; const h = document.createElement("div"); h.className = "dgroup"; h.textContent = g; $("dlist").appendChild(h); }
+    const b = document.createElement("button");
+    b.className = "dstep"; b.dataset.i = i;
+    b.innerHTML = `<span class="c">${i + 1}</span><span>${f.cap.split(" — ")[0]}</span>`;
+    b.onclick = () => { di = i; drawDemo(); };
+    $("dlist").appendChild(b);
+  });
+}
+async function drawDemo() {
+  const F = D.demo[tool], f = F[di];
+  document.querySelectorAll(".dstep").forEach(b => b.classList.toggle("on", +b.dataset.i === di));
+  const on = document.querySelector(".dstep.on"); if (on) on.scrollIntoView({ block: "nearest" });
+  const [title, ...rest] = f.cap.split(" — ");
+  $("dcap").innerHTML = `<small>${f.group} · ${di + 1} / ${F.length}</small>${rest.length ? rest.join(" — ") : title}`;
+  $("dpos").textContent = "";
+  const c = $("cursor");
+  c.classList.remove("click");
+  const my = (drawDemo.n = (drawDemo.n || 0) + 1);
+  const u = await imgUrl(f.img);
+  if (my !== drawDemo.n) return;
+  $("dimg").src = u;
+  if (f.at) {
+    c.hidden = false;
+    void c.offsetWidth;
+    c.style.left = f.at[0] + "%"; c.style.top = f.at[1] + "%";
+    c.classList.add("click");
+  } else c.hidden = true;
+  $("dprev").disabled = di === 0; $("dnext").disabled = di === F.length - 1;
+  if (F[di + 1]) imgUrl(F[di + 1].img);
+}
+$("dprev").onclick = () => { if (di > 0) { di--; drawDemo(); } };
+$("dnext").onclick = () => { if (di < D.demo[tool].length - 1) { di++; drawDemo(); } };
+$("dplay").onclick = () => {
+  if (dtimer) return demoStop();
+  $("dplay").textContent = "❚❚ 멈추기";
+  dtimer = setInterval(() => { if (di < D.demo[tool].length - 1) { di++; drawDemo(); } else demoStop(); }, 3800);
+};
+</script>
+</body>
+</html>
