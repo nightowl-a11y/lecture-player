@@ -66,6 +66,7 @@ main { padding: 22px 48px 40px; }
 .head h2 { margin: 4px 0 0; font: 400 34px/1.2 var(--serif); }
 .head .en { color: var(--mute); font-size: 15px; margin-top: 2px; }
 .vers { display: flex; gap: 8px; flex-wrap: wrap; }
+.lsel { margin-top: 12px; } .lsel:empty { display: none; }   /* 차시 고르기 (2026-11-09) */
 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
 .stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 9; }
@@ -155,6 +156,7 @@ main { padding: 22px 48px 40px; }
         <div class="caps" id="lesson-cap"></div>
         <h2 id="lesson-title"></h2>
         <div class="en" id="lesson-en"></div>
+        <div class="vers lsel" id="lsel"></div>
       </div>
       <div class="vers" id="vers"></div>
     </div>
@@ -284,12 +286,43 @@ function m3u8Url(f, k) {
   return URL.createObjectURL(new Blob([text], { type: "application/vnd.apple.mpegurl" }));
 }
 
+/* 차시 고르기 (2026-11-09): D.lessons 가 있으면 1~3차시 버튼. 주소 끝 #W01L02 로 바로 열 수 있음 */
+let LI = 0;
+function applyLesson(i) {
+  LI = i;
+  const L = D.lessons ? D.lessons[i] : D;
+  Object.assign(D, { parts: L.parts, heygen: L.heygen, versions: L.versions, lesson: L.lesson, lesson_en: L.lesson_en });
+}
+function drawHead() {
+  $("lesson-title").textContent = D.lesson;
+  $("lesson-en").textContent = D.lesson_en;
+  $("lsel").innerHTML = "";
+  (D.lessons || []).forEach((L, i) => {
+    const b = document.createElement("button");
+    b.className = "btn sm" + (i === LI ? " primary" : "");
+    b.textContent = L.lesson;
+    b.onclick = () => switchLesson(i);
+    $("lsel").appendChild(b);
+  });
+}
+function switchLesson(i) {
+  if (i === LI) return;
+  vid.pause();
+  applyLesson(i); keep("lesson", i);
+  try { history.replaceState(null, "", "#" + D.lessons[i].code); } catch (e) {}
+  if (!D.versions.some(v => v.key === ver)) ver = "en";
+  drawHead(); drawVers();
+  playPart(0, 0, false);
+}
 function start() {
   $("course-en").textContent = D.course_en;
   $("course-ko").textContent = D.course_ko + " · 영상 보기";
   $("lesson-cap").textContent = D.course_ko;
-  $("lesson-title").textContent = D.lesson;
-  $("lesson-en").textContent = D.lesson_en;
+  if (D.lessons) {
+    const h = location.hash.slice(1).toUpperCase(), j = D.lessons.findIndex(L => L.code === h);
+    applyLesson(j >= 0 ? j : Math.min(load("lesson", 0), D.lessons.length - 1));
+  }
+  drawHead();
   if (!D.versions.some(v => v.key === ver)) ver = "en";
   drawVers(); drawCtrl();
   playPart(Math.min(load("part." + ver, 0), listFor(ver).length - 1), 0, false);
