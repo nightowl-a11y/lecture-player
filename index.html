@@ -263,11 +263,15 @@ const NOTE = {
   lip: "1안 도구 6그룹(sync.so)으로 교수님 입모양을 영어 음성에 맞춘 판입니다. 입모양은 교수님이 나오는 핵심 강의·사례 연결에만.",
   p2: "2안 도구로 만든 교안 영상 — 아바타 자리는 아직 실루엣입니다.",
   hg: "2안 아바타를 HeyGen으로 만들어 본 조각입니다. 지금 있는 조각만, 장면(시간) 순서대로.",
+  final: "1안 도구 '산출물 추출하기'로 만든 최종본 — 파트를 한 영상으로 이은 납품 영상입니다.",
+  p2final: "2안 도구 '산출물 추출하기'로 만든 최종본 — 파트를 한 영상으로 이은 영상입니다.",
 };
+const FINAL = ["final", "p2final"];   // 최종본(합본): 파트 목록 대신 한 줄 (2026-11-13)
+const firstVer = () => D.versions.some(v => v.key === "en") ? "en" : (D.versions[0] || {}).key;
 const vid = $("vid");
 let hls = null, ver = load("ver", "en"), partIdx = 0, subsOn = load("subs", false), speed = load("speed", 1), cur = null;
 
-const listFor = k => k === "hg" ? D.heygen : D.parts;
+const listFor = k => k === "hg" ? D.heygen : FINAL.includes(k) ? (D.finals || []) : D.parts;
 function pick(part, k) {
   if (part.v[k]) return { k, f: part.v[k] };
   if (k === "lip" && part.v.en) return { k: "en", f: part.v.en, fallback: true };
@@ -291,7 +295,7 @@ let LI = 0;
 function applyLesson(i) {
   LI = i;
   const L = D.lessons ? D.lessons[i] : D;
-  Object.assign(D, { parts: L.parts, heygen: L.heygen, versions: L.versions, lesson: L.lesson, lesson_en: L.lesson_en });
+  Object.assign(D, { parts: L.parts, heygen: L.heygen, finals: L.finals || [], versions: L.versions, lesson: L.lesson, lesson_en: L.lesson_en });
 }
 function drawHead() {
   $("lesson-title").textContent = D.lesson;
@@ -310,7 +314,7 @@ function switchLesson(i) {
   vid.pause();
   applyLesson(i); keep("lesson", i);
   try { history.replaceState(null, "", "#" + D.lessons[i].code); } catch (e) {}
-  if (!D.versions.some(v => v.key === ver)) ver = "en";
+  if (!D.versions.some(v => v.key === ver)) ver = firstVer();
   drawHead(); drawVers();
   playPart(0, 0, false);
 }
@@ -323,7 +327,7 @@ function start() {
     applyLesson(j >= 0 ? j : Math.min(load("lesson", 0), D.lessons.length - 1));
   }
   drawHead();
-  if (!D.versions.some(v => v.key === ver)) ver = "en";
+  if (!D.versions.some(v => v.key === ver)) ver = firstVer();
   drawVers(); drawCtrl();
   playPart(Math.min(load("part." + ver, 0), listFor(ver).length - 1), 0, false);
   $("tab-video").onclick = () => tab("video");
@@ -357,7 +361,8 @@ function drawParts() {
     b.onclick = () => playPart(i, 0, true);
     $("parts").appendChild(b);
   });
-  $("legend").textContent = ver === "hg" ? "조각 아래 시각 = 2안 영상에서 그 장면이 나오는 자리" : "한 파트가 끝나면 다음 파트로 이어집니다.";
+  $("legend").textContent = ver === "hg" ? "조각 아래 시각 = 2안 영상에서 그 장면이 나오는 자리"
+    : FINAL.includes(ver) ? "파트를 하나로 이은 최종본입니다." : "한 파트가 끝나면 다음 파트로 이어집니다.";
 }
 function drawCtrl() {
   $("speed").innerHTML = "";
@@ -408,7 +413,7 @@ function switchVer(k) {
   if (k === ver) return;
   const t = SYNC.includes(k) && SYNC.includes(ver) ? vid.currentTime : 0;
   const playing = !vid.paused;
-  const sameList = (k === "hg") === (ver === "hg");
+  const sameList = listFor(k) === listFor(ver);
   ver = k; keep("ver", k);
   drawVers();
   playPart(sameList ? partIdx : load("part." + k, 0), t, playing);
